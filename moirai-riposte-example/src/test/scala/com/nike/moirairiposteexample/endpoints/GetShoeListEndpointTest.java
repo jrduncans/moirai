@@ -5,8 +5,7 @@ import com.nike.backstopper.exception.ApiException;
 import com.nike.moirai.ConfigFeatureFlagChecker;
 import com.nike.moirai.Suppliers;
 import com.nike.moirai.config.ConfigDecisionInput;
-import com.nike.moirai.typesafeconfig.TypesafeConfigDecider;
-import com.nike.moirai.typesafeconfig.TypesafeConfigReader;
+import com.nike.moirai.typesafeconfig.TypesafeConfigLoader;
 import com.nike.moirairiposteexample.testutils.TestUtils;
 import com.nike.riposte.server.http.RequestInfo;
 import com.nike.riposte.server.http.ResponseInfo;
@@ -25,6 +24,9 @@ import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import static com.nike.moirai.config.ConfigDeciders.enabledUsers;
+import static com.nike.moirai.config.ConfigDeciders.proportionOfUsers;
+import static com.nike.moirai.typesafeconfig.TypesafeConfigReader.TYPESAFE_CONFIG_READER;
 import static com.nike.moirairiposteexample.error.ProjectApiError.MISSING_ID_HEADER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -40,15 +42,15 @@ public class GetShoeListEndpointTest {
 
     @Before
     public void setup() {
-        Predicate<ConfigDecisionInput<Config>> whiteListedUsersDecider = TypesafeConfigDecider.ENABLED_USERS
-                .or(TypesafeConfigDecider.PROPORTION_OF_USERS);
+        Predicate<ConfigDecisionInput<Config>> whiteListedUsersDecider =
+            enabledUsers(TYPESAFE_CONFIG_READER).or(proportionOfUsers(TYPESAFE_CONFIG_READER));
         String conf;
         try {
             conf = Resources.toString(Resources.getResource("moirai.conf"), Charset.forName("UTF-8"));
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
-        Supplier<Config> supp = Suppliers.supplierAndThen(() -> conf, TypesafeConfigReader.FROM_STRING);
+        Supplier<Config> supp = Suppliers.supplierAndThen(() -> conf, TypesafeConfigLoader.FROM_STRING);
         featureFlagChecker = ConfigFeatureFlagChecker.forConfigSupplier(supp, whiteListedUsersDecider);
 
         underTest = new GetShoeListEndpoint(featureFlagChecker);

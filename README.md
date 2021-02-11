@@ -24,20 +24,20 @@ import com.nike.moirai.ConfigFeatureFlagChecker;
 import com.nike.moirai.FeatureCheckInput;
 import com.nike.moirai.FeatureFlagChecker;
 import com.nike.moirai.Suppliers;
+import com.nike.moirai.config.ConfigDeciders;
 import com.nike.moirai.resource.FileResourceLoaders;
 import com.nike.moirai.resource.reload.ResourceReloader;
-import com.nike.moirai.typesafeconfig.TypesafeConfigDecider;
-import com.nike.moirai.typesafeconfig.TypesafeConfigReader;
+import com.nike.moirai.typesafeconfig.TypesafeConfigLoader;
 import com.typesafe.config.Config;
 
 import java.io.File;
 import java.util.function.Supplier;
 
-import static com.nike.moirai.Suppliers.supplierAndThen;
+import static com.nike.moirai.typesafeconfig.TypesafeConfigReader.TYPESAFE_CONFIG_READER;
 
 public class Usage {
     Supplier<String> fileSupplier = FileResourceLoaders.forFile(new File("/path/to/conf/file/moirai.conf"));
-    Supplier<Config> configSupplier = supplierAndThen(fileSupplier, TypesafeConfigReader.FROM_STRING);
+    Supplier<Config> configSupplier = Suppliers.supplierAndThen(fileSupplier, TypesafeConfigReader.FROM_STRING);
 
     ResourceReloader<Config> resourceReloader = ResourceReloader.withDefaultSettings(
         Suppliers.async(configSupplier),
@@ -46,7 +46,7 @@ public class Usage {
 
     FeatureFlagChecker featureFlagChecker = ConfigFeatureFlagChecker.forReloadableResource(
         resourceReloader,
-        TypesafeConfigDecider.ENABLED_USERS.or(TypesafeConfigDecider.PROPORTION_OF_USERS)
+        ConfigDeciders.enabledUsers(TYPESAFE_CONFIG_READER).or(ConfigDeciders.proportionOfUsers(TYPESAFE_CONFIG_READER))
     );
 
     public int getNumber(String userIdentity) {

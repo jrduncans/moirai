@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.function.Predicate;
 
-import static com.nike.moirai.config.ConfigDeciders.customDimensionCheck;
+import static com.nike.moirai.config.ConfigDeciderSupport.customDimensionCheck;
 
 /**
  * Returns true for a configured collection of values for some custom dimension.
@@ -15,6 +15,7 @@ import static com.nike.moirai.config.ConfigDeciders.customDimensionCheck;
  * @param <V> the type of value for the dimension
  */
 public abstract class EnabledCustomDimensionConfigDecider<C, V> extends EnabledValuesConfigDecider<C, V> {
+
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override

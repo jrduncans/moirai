@@ -17,7 +17,7 @@ public class FeatureCheckInput {
     public enum DimensionKey {
         USER_ID, DATE_TIME;
 
-        private static Set<String> KEYS = Arrays.stream(DimensionKey.values()).map(DimensionKey::name).collect(Collectors.toSet());
+        private static final Set<String> KEYS = Arrays.stream(DimensionKey.values()).map(DimensionKey::name).collect(Collectors.toSet());
     }
 
     private final Map<String, ?> dimensions;

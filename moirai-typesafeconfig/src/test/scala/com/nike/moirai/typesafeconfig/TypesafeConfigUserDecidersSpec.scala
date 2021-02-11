@@ -1,19 +1,25 @@
 package com.nike.moirai.typesafeconfig
 
+import com.nike.moirai.config.ConfigDeciders._
+import com.nike.moirai.config.ConfigDecisionInput
 import com.nike.moirai.resource.FileResourceLoaders
+import com.nike.moirai.typesafeconfig.TypesafeConfigReader.TYPESAFE_CONFIG_READER
 import com.nike.moirai.{ConfigFeatureFlagChecker, FeatureCheckInput, Suppliers}
 import com.typesafe.config.Config
+import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest.{FunSpec, Matchers}
 
+import scala.collection.mutable
+
 //noinspection TypeAnnotation
-class TypesafeConfigUserDecidersSpec extends FunSpec with Matchers {
+class TypesafeConfigUserDecidersSpec extends FunSpec with Matchers with GeneratorDrivenPropertyChecks {
 
   describe("A combined enabled-user and proportion-of-users config decider") {
     val resourceLoader = FileResourceLoaders.forClasspathResource("moirai.conf")
 
     val featureFlagChecker = ConfigFeatureFlagChecker.forConfigSupplier[Config](
-      Suppliers.supplierAndThen(resourceLoader, TypesafeConfigReader.FROM_STRING),
-      TypesafeConfigDecider.ENABLED_USERS.or(TypesafeConfigDecider.PROPORTION_OF_USERS)
+      Suppliers.supplierAndThen(resourceLoader, TypesafeConfigLoader.FROM_STRING),
+      enabledUsers(TYPESAFE_CONFIG_READER).or(proportionOfUsers(TYPESAFE_CONFIG_READER))
     )
 
     describe("a feature specifying both enabledUserIds and an enabledProportion of 0.0") {
@@ -69,12 +75,51 @@ class TypesafeConfigUserDecidersSpec extends FunSpec with Matchers {
     }
   }
 
+  describe("A proportionOfUsers config decider with featureGroup") {
+    val resourceLoader = FileResourceLoaders.forClasspathResource("moirai-feature-group.conf")
+
+    val featureFlagChecker = ConfigFeatureFlagChecker.forConfigSupplier[Config](
+      Suppliers.supplierAndThen(resourceLoader, TypesafeConfigLoader.FROM_STRING),
+      proportionOfUsers(TYPESAFE_CONFIG_READER)
+    )
+
+    it("should decide features are enabled for the same users if the features are in the same feature group and have the same proportion enabled") {
+      val feature1EnabledUsers = mutable.Buffer.empty[String]
+      val feature2EnabledUsers = mutable.Buffer.empty[String]
+      val feature3EnabledUsers = mutable.Buffer.empty[String]
+      val feature4EnabledUsers = mutable.Buffer.empty[String]
+      val feature5EnabledUsers = mutable.Buffer.empty[String]
+
+      implicit val generatorDrivenConfig: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 1000)
+
+      forAll { (userId: String) =>
+        List(
+          ("feature1", feature1EnabledUsers),
+          ("feature2", feature2EnabledUsers),
+          ("feature3", feature3EnabledUsers),
+          ("feature4", feature4EnabledUsers),
+          ("feature5", feature5EnabledUsers)).foreach {
+          case (feature, buffer) if featureFlagChecker.isFeatureEnabled(feature, FeatureCheckInput.forUser(userId)) => buffer += userId
+          case _ =>
+        }
+      }
+
+      feature1EnabledUsers should contain theSameElementsAs feature2EnabledUsers
+      feature3EnabledUsers should contain theSameElementsAs feature4EnabledUsers
+
+      feature1EnabledUsers should not (contain theSameElementsAs feature3EnabledUsers)
+      feature1EnabledUsers should not (contain theSameElementsAs feature5EnabledUsers)
+
+      feature3EnabledUsers should not (contain theSameElementsAs feature5EnabledUsers)
+    }
+  }
+
   describe("A featureEnabled config decider") {
     val resourceLoader = FileResourceLoaders.forClasspathResource("moirai.conf")
 
     val featureFlagChecker = ConfigFeatureFlagChecker.forConfigSupplier[Config](
-      Suppliers.supplierAndThen(resourceLoader, TypesafeConfigReader.FROM_STRING),
-      TypesafeConfigDecider.FEATURE_ENABLED
+      Suppliers.supplierAndThen(resourceLoader, TypesafeConfigLoader.FROM_STRING),
+      featureEnabled(TYPESAFE_CONFIG_READER)
     )
 
     it("should be enabled if the configuration say so") {
@@ -97,8 +142,8 @@ class TypesafeConfigUserDecidersSpec extends FunSpec with Matchers {
     val resourceLoader = FileResourceLoaders.forClasspathResource("moirai.conf")
 
     val featureFlagChecker = ConfigFeatureFlagChecker.forConfigSupplier[Config](
-      Suppliers.supplierAndThen(resourceLoader, TypesafeConfigReader.FROM_STRING),
-      TypesafeConfigDecider.enabledCustomStringDimension("country", "enabledCountries")
+      Suppliers.supplierAndThen(resourceLoader, TypesafeConfigLoader.FROM_STRING),
+      TypesafeConfigCustomDeciders.enabledCustomStringDimension("country", "enabledCountries")
     )
 
     it("should be enabled for a user in an enabled country") {

@@ -1,7 +1,7 @@
 import sbt.Keys.javacOptions
 import Dependencies._
 
-lazy val commonSettings = Seq(
+val commonSettings = Seq(
   organization := "com.nike.moirai",
   organizationName := "Nike",
   organizationHomepage := Some(url("http://engineering.nike.com")),
@@ -85,6 +85,7 @@ lazy val `moirai-typesafeconfig` = project
     libraryDependencies ++= Seq(
       typesafeConfig,
       scalaTest,
+      scalaCheck,
       logback
     )
   )
