@@ -1,8 +1,5 @@
 package com.nike.moirai.config;
 
-import com.nike.moirai.FeatureCheckInput;
-
-import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -12,27 +9,19 @@ import static com.nike.moirai.config.ConfigDeciderSupport.userIdCheck;
  * {@link Predicate} factories given a {@link ConfigReader}
  */
 public class ConfigDeciders {
-    public static <C> Predicate<ConfigDecisionInput<C>> featureEnabled(ConfigReader<C> configReader) {
-        return configDecisionInput ->
-            configReader.featureEnabled(configDecisionInput.getConfig(), configDecisionInput.getFeatureIdentifier()).orElse(false);
+    public static <C, R extends ConfigReader<C>> ConfigDecider<C, R> featureEnabled() {
+        return new ConfigDecider<>((configReader, configDecisionInput) ->
+            configReader.featureEnabled(configDecisionInput.getConfig(), configDecisionInput.getFeatureIdentifier()).orElse(false));
     }
 
-    public static <C> Predicate<ConfigDecisionInput<C>> enabledUsers(ConfigReader<C> configReader) {
-        return new EnabledValuesConfigDecider<C, String>() {
-            @Override
-            protected Collection<String> enabledValues(C config, String featureIdentifier) {
-                return configReader.enabledUsers(config, featureIdentifier);
-            }
-
-            @Override
-            protected boolean checkValue(FeatureCheckInput featureCheckInput, Predicate<String> check) {
-                return userIdCheck(featureCheckInput, check);
-            }
-        };
+    public static <C, R extends ConfigReader<C>> ConfigDecider<C, R> enabledUsers() {
+        return new ConfigDecider<>(((configReader, configDecisionInput) ->
+            userIdCheck(configDecisionInput.getFeatureCheckInput(), userId ->
+                configReader.enabledUsers(configDecisionInput.getConfig(), configDecisionInput.getFeatureIdentifier()).contains(userId))));
     }
 
-    public static <C> Predicate<ConfigDecisionInput<C>> proportionOfUsers(ConfigReader<C> configReader) {
-        return configDecisionInput ->
+    public static <C, R extends ConfigReader<C>> ConfigDecider<C, R> proportionOfUsers() {
+        return new ConfigDecider<>((configReader, configDecisionInput) ->
             userIdCheck(configDecisionInput.getFeatureCheckInput(), userId ->
                 configReader.enabledProportion(configDecisionInput.getConfig(), configDecisionInput.getFeatureIdentifier()).map(enabledProportion ->
                     userHashEnabled(
@@ -41,7 +30,7 @@ public class ConfigDeciders {
                         configReader.featureGroup(configDecisionInput.getConfig(), configDecisionInput.getFeatureIdentifier()),
                         enabledProportion)
                 ).orElse(false)
-            );
+            ));
     }
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")

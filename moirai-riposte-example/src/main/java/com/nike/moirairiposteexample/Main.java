@@ -3,8 +3,11 @@ package com.nike.moirairiposteexample;
 import com.google.common.io.Resources;
 import com.nike.moirai.ConfigFeatureFlagChecker;
 import com.nike.moirai.Suppliers;
+import com.nike.moirai.config.ConfigDecider;
+import com.nike.moirai.config.ConfigDeciders;
 import com.nike.moirai.config.ConfigDecisionInput;
 import com.nike.moirai.typesafeconfig.TypesafeConfigLoader;
+import com.nike.moirai.typesafeconfig.TypesafeConfigReader;
 import com.nike.moirairiposteexample.endpoints.GetShoeListEndpoint;
 import com.nike.riposte.server.Server;
 import com.nike.riposte.server.config.ServerConfig;
@@ -18,8 +21,6 @@ import java.util.Collections;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import static com.nike.moirai.config.ConfigDeciders.enabledUsers;
-import static com.nike.moirai.config.ConfigDeciders.proportionOfUsers;
 import static com.nike.moirai.typesafeconfig.TypesafeConfigReader.TYPESAFE_CONFIG_READER;
 
 public class Main {
@@ -27,8 +28,9 @@ public class Main {
     public static class AppServerConfig implements ServerConfig {
 
         ConfigFeatureFlagChecker<Config> featureFlagChecker() {
+            ConfigDecider<Config, TypesafeConfigReader> configDecider = ConfigDeciders.<Config, TypesafeConfigReader>enabledUsers().or(ConfigDeciders.proportionOfUsers());
             Predicate<ConfigDecisionInput<Config>> whiteListedUsersDecider =
-                enabledUsers(TYPESAFE_CONFIG_READER).or(proportionOfUsers(TYPESAFE_CONFIG_READER));
+                ConfigDeciders.<Config, TypesafeConfigReader>enabledUsers().or(ConfigDeciders.proportionOfUsers()).predicate(TYPESAFE_CONFIG_READER);
 
             String conf;
                 try {
